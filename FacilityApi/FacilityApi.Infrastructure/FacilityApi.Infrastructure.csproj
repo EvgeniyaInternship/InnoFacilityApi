@@ -1,11 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <UserSecretsId>a27f01fb-1d5b-45e7-be2c-d9161fd0afa8</UserSecretsId>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Dapper" Version="2.1.89" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="10.0.14" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
+    <PackageReference Include="Npgsql" Version="10.0.3" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\FacilityApi.Domain\FacilityApi.Domain.csproj" />
