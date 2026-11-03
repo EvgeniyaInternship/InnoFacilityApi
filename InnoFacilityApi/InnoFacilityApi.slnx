@@ -1,3 +1,3 @@
 <Solution>
-  <Project Path="InnoFacilityApi/InnoFacilityApi.csproj" />
+  <Project Path="FacilityApi.Api/FacilityApi.Api.csproj" />
 </Solution>
