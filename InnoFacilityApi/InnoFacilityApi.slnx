@@ -1,3 +1,6 @@
 <Solution>
   <Project Path="FacilityApi.Api/FacilityApi.Api.csproj" />
+  <Project Path="FacilityApi.Application/FacilityApi.Application.csproj" />
+  <Project Path="FacilityApi.Domain/FacilityApi.Domain.csproj" />
+  <Project Path="FacilityApi.Infrastructure/FacilityApi.Infrastructure.csproj" />
 </Solution>

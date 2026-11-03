@@ -6,4 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\FacilityApi.Application\FacilityApi.Application.csproj" />
+    <ProjectReference Include="..\FacilityApi.Infrastructure\FacilityApi.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
