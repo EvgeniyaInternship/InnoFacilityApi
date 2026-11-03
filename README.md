@@ -50,8 +50,8 @@ dotnet run --project FacilityApi.Api
 5. **Verify the service**
 Once started, the service will be accessible locally at:
 ```text
-https://localhost:7260
-http://localhost:5201
+https://localhost:7224
+http://localhost:5035
 
 ```
 
