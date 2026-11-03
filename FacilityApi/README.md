@@ -52,7 +52,7 @@ Remove the current `BaseEntity`. Entities do not inherit it, and they do not kee
 
 Profiles stores `OfficeId` on admin, receptionist, and doctor, and `SpecializationId` on doctor. Those rows stay in Profiles.
 
-Each repository interface repeats the Profiles `IGenericRepository` operations for its own entity: `CountAsync`, `GetAsync`, and `GetAllAsync` take an `Expression` predicate. Mutations are `Add`, `AddRange`, `Update`, `UpdateRange`, `Remove`, and `RemoveRange`. The interfaces do not share a base interface.
+Each repository interface repeats the Profiles `IGenericRepository` operations for its own entity. `CountAsync`, `GetAsync`, and `GetAllAsync` take an `Expression` predicate. Mutations are `AddAsync`, `AddRangeAsync`, `UpdateAsync`, `UpdateRangeAsync`, `RemoveAsync`, and `RemoveRangeAsync`. The interfaces do not share a base interface.
 
 ### FacilityApi.Application
 

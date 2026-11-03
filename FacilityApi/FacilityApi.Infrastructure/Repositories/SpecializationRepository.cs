@@ -1,7 +1,6 @@
 using Dapper;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Interfaces;
-using FacilityApi.Infrastructure.Constants;
 using FacilityApi.Infrastructure.Data;
 using System.Linq.Expressions;
 
@@ -26,12 +25,17 @@ public sealed class SpecializationRepository(NpgsqlConnectionFactory connectionF
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         using var connection = connectionFactory.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<SpecializationEntity>(new CommandDefinition(
-            $"SELECT {SpecializationRepositoryConstants.Columns} FROM \"Specializations\" WHERE {where} LIMIT 1",
+            $"""
+            SELECT "Id", "Title", "Description"
+            FROM "Specializations"
+            WHERE {where}
+            LIMIT 1
+            """,
             parameters,
             cancellationToken: cancellationToken));
     }
 
-    public async Task<List<SpecializationEntity>> GetAllAsync(
+    public async Task<IEnumerable<SpecializationEntity>> GetAllAsync(
         Expression<Func<SpecializationEntity, bool>> predicate,
         int pageNumber = 0,
         int pageSize = 0,
@@ -39,57 +43,97 @@ public sealed class SpecializationRepository(NpgsqlConnectionFactory connectionF
     {
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         var sql = SqlPredicateBuilder.AppendPage(
-            $"SELECT {SpecializationRepositoryConstants.Columns} FROM \"Specializations\" WHERE {where}",
+            $"""
+            SELECT "Id", "Title", "Description"
+            FROM "Specializations"
+            WHERE {where}
+            """,
             pageNumber,
             pageSize,
             parameters);
         using var connection = connectionFactory.CreateConnection();
-        var rows = await connection.QueryAsync<SpecializationEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
-        return rows.AsList();
+        return await connection.QueryAsync<SpecializationEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
     }
 
-    public void Add(SpecializationEntity entity)
+    public async Task AddAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.InsertSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Specializations" ("Id", "Title", "Description")
+            VALUES (@Id, @Title, @Description)
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void AddRange(IEnumerable<SpecializationEntity> entities)
-    {
-        if (!entities.Any())
-            return;
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.InsertSql, entities);
-    }
-
-    public void Update(SpecializationEntity entity)
-    {
-        ArgumentNullException.ThrowIfNull(entity);
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.UpdateSql, entity);
-    }
-
-    public void UpdateRange(IEnumerable<SpecializationEntity> entities)
+    public async Task AddRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.UpdateSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Specializations" ("Id", "Title", "Description")
+            VALUES (@Id, @Title, @Description)
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 
-    public void Remove(SpecializationEntity entity)
+    public async Task UpdateAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.DeleteSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Specializations"
+            SET "Title" = @Title,
+                "Description" = @Description
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void RemoveRange(IEnumerable<SpecializationEntity> entities)
+    public async Task UpdateRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(SpecializationRepositoryConstants.DeleteSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Specializations"
+            SET "Title" = @Title,
+                "Description" = @Description
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Specializations"
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
+    {
+        if (!entities.Any())
+            return;
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Specializations"
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 }

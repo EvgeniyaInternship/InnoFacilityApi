@@ -1,7 +1,6 @@
 using Dapper;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Interfaces;
-using FacilityApi.Infrastructure.Constants;
 using FacilityApi.Infrastructure.Data;
 using System.Linq.Expressions;
 
@@ -26,12 +25,17 @@ public sealed class OfficeRepository(NpgsqlConnectionFactory connectionFactory) 
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         using var connection = connectionFactory.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<OfficeEntity>(new CommandDefinition(
-            $"SELECT {OfficeRepositoryConstants.Columns} FROM \"Offices\" WHERE {where} LIMIT 1",
+            $"""
+            SELECT "Id", "Title"
+            FROM "Offices"
+            WHERE {where}
+            LIMIT 1
+            """,
             parameters,
             cancellationToken: cancellationToken));
     }
 
-    public async Task<List<OfficeEntity>> GetAllAsync(
+    public async Task<IEnumerable<OfficeEntity>> GetAllAsync(
         Expression<Func<OfficeEntity, bool>> predicate,
         int pageNumber = 0,
         int pageSize = 0,
@@ -39,57 +43,95 @@ public sealed class OfficeRepository(NpgsqlConnectionFactory connectionFactory) 
     {
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         var sql = SqlPredicateBuilder.AppendPage(
-            $"SELECT {OfficeRepositoryConstants.Columns} FROM \"Offices\" WHERE {where}",
+            $"""
+            SELECT "Id", "Title"
+            FROM "Offices"
+            WHERE {where}
+            """,
             pageNumber,
             pageSize,
             parameters);
         using var connection = connectionFactory.CreateConnection();
-        var rows = await connection.QueryAsync<OfficeEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
-        return rows.AsList();
+        return await connection.QueryAsync<OfficeEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
     }
 
-    public void Add(OfficeEntity entity)
+    public async Task AddAsync(OfficeEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.InsertSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Offices" ("Id", "Title")
+            VALUES (@Id, @Title)
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void AddRange(IEnumerable<OfficeEntity> entities)
-    {
-        if (!entities.Any())
-            return;
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.InsertSql, entities);
-    }
-
-    public void Update(OfficeEntity entity)
-    {
-        ArgumentNullException.ThrowIfNull(entity);
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.UpdateSql, entity);
-    }
-
-    public void UpdateRange(IEnumerable<OfficeEntity> entities)
+    public async Task AddRangeAsync(IEnumerable<OfficeEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.UpdateSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Offices" ("Id", "Title")
+            VALUES (@Id, @Title)
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 
-    public void Remove(OfficeEntity entity)
+    public async Task UpdateAsync(OfficeEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.DeleteSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Offices"
+            SET "Title" = @Title
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void RemoveRange(IEnumerable<OfficeEntity> entities)
+    public async Task UpdateRangeAsync(IEnumerable<OfficeEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(OfficeRepositoryConstants.DeleteSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Offices"
+            SET "Title" = @Title
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveAsync(OfficeEntity entity, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Offices"
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveRangeAsync(IEnumerable<OfficeEntity> entities, CancellationToken cancellationToken = default)
+    {
+        if (!entities.Any())
+            return;
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Offices"
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 }

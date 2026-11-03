@@ -1,7 +1,6 @@
 using Dapper;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Interfaces;
-using FacilityApi.Infrastructure.Constants;
 using FacilityApi.Infrastructure.Data;
 using System.Linq.Expressions;
 
@@ -26,12 +25,17 @@ public sealed class ServiceRepository(NpgsqlConnectionFactory connectionFactory)
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         using var connection = connectionFactory.CreateConnection();
         return await connection.QueryFirstOrDefaultAsync<ServiceEntity>(new CommandDefinition(
-            $"SELECT {ServiceRepositoryConstants.Columns} FROM \"Services\" WHERE {where} LIMIT 1",
+            $"""
+            SELECT "Id", "Title", "Description", "Price", "IsActive", "DoctorId"
+            FROM "Services"
+            WHERE {where}
+            LIMIT 1
+            """,
             parameters,
             cancellationToken: cancellationToken));
     }
 
-    public async Task<List<ServiceEntity>> GetAllAsync(
+    public async Task<IEnumerable<ServiceEntity>> GetAllAsync(
         Expression<Func<ServiceEntity, bool>> predicate,
         int pageNumber = 0,
         int pageSize = 0,
@@ -39,57 +43,103 @@ public sealed class ServiceRepository(NpgsqlConnectionFactory connectionFactory)
     {
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
         var sql = SqlPredicateBuilder.AppendPage(
-            $"SELECT {ServiceRepositoryConstants.Columns} FROM \"Services\" WHERE {where}",
+            $"""
+            SELECT "Id", "Title", "Description", "Price", "IsActive", "DoctorId"
+            FROM "Services"
+            WHERE {where}
+            """,
             pageNumber,
             pageSize,
             parameters);
         using var connection = connectionFactory.CreateConnection();
-        var rows = await connection.QueryAsync<ServiceEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
-        return rows.AsList();
+        return await connection.QueryAsync<ServiceEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
     }
 
-    public void Add(ServiceEntity entity)
+    public async Task AddAsync(ServiceEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.InsertSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Services" ("Id", "Title", "Description", "Price", "IsActive", "DoctorId")
+            VALUES (@Id, @Title, @Description, @Price, @IsActive, @DoctorId)
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void AddRange(IEnumerable<ServiceEntity> entities)
-    {
-        if (!entities.Any())
-            return;
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.InsertSql, entities);
-    }
-
-    public void Update(ServiceEntity entity)
-    {
-        ArgumentNullException.ThrowIfNull(entity);
-        using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.UpdateSql, entity);
-    }
-
-    public void UpdateRange(IEnumerable<ServiceEntity> entities)
+    public async Task AddRangeAsync(IEnumerable<ServiceEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.UpdateSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            INSERT INTO "Services" ("Id", "Title", "Description", "Price", "IsActive", "DoctorId")
+            VALUES (@Id, @Title, @Description, @Price, @IsActive, @DoctorId)
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 
-    public void Remove(ServiceEntity entity)
+    public async Task UpdateAsync(ServiceEntity entity, CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(entity);
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.DeleteSql, entity);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Services"
+            SET "Title" = @Title,
+                "Description" = @Description,
+                "Price" = @Price,
+                "IsActive" = @IsActive,
+                "DoctorId" = @DoctorId
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
     }
 
-    public void RemoveRange(IEnumerable<ServiceEntity> entities)
+    public async Task UpdateRangeAsync(IEnumerable<ServiceEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
         using var connection = connectionFactory.CreateConnection();
-        connection.Execute(ServiceRepositoryConstants.DeleteSql, entities);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE "Services"
+            SET "Title" = @Title,
+                "Description" = @Description,
+                "Price" = @Price,
+                "IsActive" = @IsActive,
+                "DoctorId" = @DoctorId
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveAsync(ServiceEntity entity, CancellationToken cancellationToken = default)
+    {
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Services"
+            WHERE "Id" = @Id
+            """,
+            entity,
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task RemoveRangeAsync(IEnumerable<ServiceEntity> entities, CancellationToken cancellationToken = default)
+    {
+        if (!entities.Any())
+            return;
+        using var connection = connectionFactory.CreateConnection();
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            DELETE FROM "Services"
+            WHERE "Id" = @Id
+            """,
+            entities,
+            cancellationToken: cancellationToken));
     }
 }
