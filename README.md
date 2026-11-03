@@ -2,6 +2,8 @@
 
 Facility API is a backend service responsible for managing physical offices, healthcare services, and medical specializations within the platform.
 
+Solution layout and the implementation plan are in [FacilityApi/README.md](FacilityApi/README.md).
+
 ---
 
 ## Prerequisites
