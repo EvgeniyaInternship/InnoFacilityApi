@@ -69,7 +69,9 @@ Use cases and the types controllers exchange with clients. References Domain onl
 
 `DependencyInjection.AddApplicationServices` registers validators from this assembly, SharpGrip automatic MVC validation, and the scoped services.
 
-The application service assigns `Guid.NewGuid()` before insert. Creating or updating an office whose `ServiceId` does not exist throws `KeyNotFoundException`. Deleting a service that still has offices throws `ConflictException`. `IsActive` is a column on the service. Delete removes the row.
+The application service assigns `Guid.NewGuid()` before insert. A missing office, service, or specialization throws `KeyNotFoundException`. Delete removes the row.
+
+Update, delete, and the range forms of those operations call the repository twice (load, then write), so they call `IDbTransactionScope.BeginAsync`. The method commits after both calls succeed and rolls back when one throws. Create and create-range call the repository once and do not open a transaction. There is no unit of work. Repositories reuse the open transaction connection instead of opening a second one.
 
 There is no password hasher and no identity client.
 

@@ -16,6 +16,7 @@ public static class DependencyInjection
             .ValidateOnStart();
 
         services.AddSingleton<NpgsqlConnectionFactory>();
+        services.AddScoped<IDbTransactionScope, DatabaseTransactionScope>();
         services.AddScoped<IOfficeRepository, OfficeRepository>();
         services.AddScoped<IServiceRepository, ServiceRepository>();
         services.AddScoped<ISpecializationRepository, SpecializationRepository>();

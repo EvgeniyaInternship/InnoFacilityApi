@@ -11,11 +11,14 @@ public sealed class SpecializationRepository(NpgsqlConnectionFactory connectionF
     public async Task<int> CountAsync(Expression<Func<SpecializationEntity, bool>> predicate, CancellationToken cancellationToken = default)
     {
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
-        using var connection = connectionFactory.CreateConnection();
-        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
-            $"SELECT COUNT(*) FROM \"Specializations\" WHERE {where}",
-            parameters,
-            cancellationToken: cancellationToken));
+        return await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteScalarAsync<int>(new CommandDefinition(
+                $"SELECT COUNT(*) FROM \"Specializations\" WHERE {where}",
+                parameters,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task<SpecializationEntity?> GetAsync(
@@ -23,16 +26,19 @@ public sealed class SpecializationRepository(NpgsqlConnectionFactory connectionF
         CancellationToken cancellationToken = default)
     {
         var (where, parameters) = SqlPredicateBuilder.Build(predicate);
-        using var connection = connectionFactory.CreateConnection();
-        return await connection.QueryFirstOrDefaultAsync<SpecializationEntity>(new CommandDefinition(
-            $"""
-            SELECT "Id", "Title", "Description"
-            FROM "Specializations"
-            WHERE {where}
-            LIMIT 1
-            """,
-            parameters,
-            cancellationToken: cancellationToken));
+        return await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.QueryFirstOrDefaultAsync<SpecializationEntity>(new CommandDefinition(
+                $"""
+                SELECT "Id", "Title", "Description"
+                FROM "Specializations"
+                WHERE {where}
+                LIMIT 1
+                """,
+                parameters,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task<IEnumerable<SpecializationEntity>> GetAllAsync(
@@ -51,89 +57,116 @@ public sealed class SpecializationRepository(NpgsqlConnectionFactory connectionF
             pageNumber,
             pageSize,
             parameters);
-        using var connection = connectionFactory.CreateConnection();
-        return await connection.QueryAsync<SpecializationEntity>(new CommandDefinition(sql, parameters, cancellationToken: cancellationToken));
+        return await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.QueryAsync<SpecializationEntity>(new CommandDefinition(
+                sql,
+                parameters,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task AddAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            INSERT INTO "Specializations" ("Id", "Title", "Description")
-            VALUES (@Id, @Title, @Description)
-            """,
-            entity,
-            cancellationToken: cancellationToken));
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO "Specializations" ("Id", "Title", "Description")
+                VALUES (@Id, @Title, @Description)
+                """,
+                entity,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task AddRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            INSERT INTO "Specializations" ("Id", "Title", "Description")
-            VALUES (@Id, @Title, @Description)
-            """,
-            entities,
-            cancellationToken: cancellationToken));
+
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO "Specializations" ("Id", "Title", "Description")
+                VALUES (@Id, @Title, @Description)
+                """,
+                entities,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task UpdateAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            UPDATE "Specializations"
-            SET "Title" = @Title,
-                "Description" = @Description
-            WHERE "Id" = @Id
-            """,
-            entity,
-            cancellationToken: cancellationToken));
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE "Specializations"
+                SET "Title" = @Title,
+                    "Description" = @Description
+                WHERE "Id" = @Id
+                """,
+                entity,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task UpdateRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            UPDATE "Specializations"
-            SET "Title" = @Title,
-                "Description" = @Description
-            WHERE "Id" = @Id
-            """,
-            entities,
-            cancellationToken: cancellationToken));
+
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE "Specializations"
+                SET "Title" = @Title,
+                    "Description" = @Description
+                WHERE "Id" = @Id
+                """,
+                entities,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task RemoveAsync(SpecializationEntity entity, CancellationToken cancellationToken = default)
     {
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            DELETE FROM "Specializations"
-            WHERE "Id" = @Id
-            """,
-            entity,
-            cancellationToken: cancellationToken));
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE FROM "Specializations"
+                WHERE "Id" = @Id
+                """,
+                entity,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 
     public async Task RemoveRangeAsync(IEnumerable<SpecializationEntity> entities, CancellationToken cancellationToken = default)
     {
         if (!entities.Any())
             return;
-        using var connection = connectionFactory.CreateConnection();
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            DELETE FROM "Specializations"
-            WHERE "Id" = @Id
-            """,
-            entities,
-            cancellationToken: cancellationToken));
+
+        await DbSession.ExecuteAsync(
+            connectionFactory,
+            (connection, transaction, token) => connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE FROM "Specializations"
+                WHERE "Id" = @Id
+                """,
+                entities,
+                transaction,
+                cancellationToken: token)),
+            cancellationToken);
     }
 }
