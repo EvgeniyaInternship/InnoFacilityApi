@@ -48,11 +48,11 @@ Business model and persistence contracts. No reference to the other projects. No
 
 Remove the current `BaseEntity`. Entities do not inherit it, and they do not keep navigation properties.
 
-`OfficeEntity` has `Id`, `Title`, and `ServiceId`. `SpecializationEntity` has `Id` and `Title`. `ServiceEntity` has `Id`, `Price` (`decimal`), and `IsActive`. `Id` and `ServiceId` are `Guid`, the same type Profiles already stores on `OfficeId` and `SpecializationId`.
+`OfficeEntity` has `Id` and `Title`. `SpecializationEntity` has `Id`, `Title`, and `Description`. `ServiceEntity` has `Id`, `Title`, `Description`, `Price` (`decimal`), `IsActive`, and `DoctorId`. `Id` and `DoctorId` are `Guid`. `DoctorId` is the Profiles doctor id. This database has no foreign key to the doctor table.
 
-`ServiceId` on an office is the only foreign key inside this database. Profiles stores `OfficeId` on admin, receptionist, and doctor, and `SpecializationId` on doctor. Profiles doctor and the appointments service store `ServiceId`. Those rows stay in the other databases. Facility does not store their ids.
+Profiles stores `OfficeId` on admin, receptionist, and doctor, and `SpecializationId` on doctor. Those rows stay in Profiles.
 
-Each repository interface repeats the Profiles `IGenericRepository` operations for its own entity: `CountAsync`, `GetAsync`, and `GetAllAsync` take an `Expression` predicate, and `GetAsync` and `GetAllAsync` take `isTracked`. Mutations are `Add`, `AddRange`, `Update`, `UpdateRange`, `Remove`, and `RemoveRange`. The interfaces do not share a base interface.
+Each repository interface repeats the Profiles `IGenericRepository` operations for its own entity. `CountAsync`, `GetAsync`, and `GetAllAsync` take an `Expression` predicate. Mutations are `AddAsync`, `AddRangeAsync`, `UpdateAsync`, `UpdateRangeAsync`, `RemoveAsync`, and `RemoveRangeAsync`. The interfaces do not share a base interface.
 
 ### FacilityApi.Application
 
@@ -93,11 +93,11 @@ Each repository owns its SQL text. Each method opens its own connection, runs th
 
 | Table | Columns |
 | --- | --- |
-| `Services` | `Id uuid` primary key, `Price numeric` not null, `IsActive boolean` not null default true |
-| `Specializations` | `Id uuid` primary key, `Title text` not null |
-| `Offices` | `Id uuid` primary key, `Title text` not null, `ServiceId uuid` not null references `Services(Id)` on delete restrict, index on `ServiceId` |
+| `Services` | `Id uuid` primary key, `Title text` not null, `Description text` not null, `Price numeric` not null, `IsActive boolean` not null default true, `DoctorId uuid` not null |
+| `Specializations` | `Id uuid` primary key, `Title text` not null, `Description text` not null |
+| `Offices` | `Id uuid` primary key, `Title text` not null |
 
-Column names match the C# property names, same as the Profiles tables (`Id`, `Title`, `ServiceId`, `Price`, `IsActive`).
+Column names match the C# property names (`Id`, `Title`, `Description`, `Price`, `IsActive`, `DoctorId`).
 
 ### FacilityApi.Api
 
