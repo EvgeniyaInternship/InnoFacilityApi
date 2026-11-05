@@ -76,12 +76,9 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating specialization.", ex);
         }
     }
@@ -98,12 +95,9 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.RemoveAsync(specialization, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing specialization.", ex);
         }
     }
@@ -138,12 +132,9 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating specializations.", ex);
         }
     }
@@ -161,12 +152,9 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.RemoveRangeAsync(existingSpecializations, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing specializations.", ex);
         }
     }

@@ -78,12 +78,9 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             await serviceRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating service.", ex);
         }
     }
@@ -100,12 +97,9 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             await serviceRepository.RemoveAsync(service, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing service.", ex);
         }
     }
@@ -140,12 +134,9 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             await serviceRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating services.", ex);
         }
     }
@@ -163,12 +154,9 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             await serviceRepository.RemoveRangeAsync(existingServices, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing services.", ex);
         }
     }

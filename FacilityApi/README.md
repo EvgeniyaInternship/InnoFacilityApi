@@ -74,7 +74,7 @@ The application service assigns `Guid.NewGuid()` before insert. A missing office
 
 Update, delete, and the range forms of those operations call the repository twice (load, then write), so they call `IDbTransactionScope.BeginAsync`. The method commits after both calls succeed and rolls back when one throws. Create and create-range call the repository once and do not open a transaction. There is no unit of work. Repositories reuse the open transaction connection instead of opening a second one.
 
-Write methods catch unexpected exceptions, roll back when a transaction is open, and throw `ServerException`. `KeyNotFoundException` and `AppException` are rethrown so the API can map them to 404 and 400.
+Write methods catch unexpected exceptions, roll back when a transaction is open, and throw `ServerException`. `KeyNotFoundException` is thrown in the `try` block and is not caught. `AppException` is not caught either.
 
 There is no password hasher and no identity client.
 

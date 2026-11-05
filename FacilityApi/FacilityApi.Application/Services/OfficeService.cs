@@ -76,12 +76,9 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating office.", ex);
         }
     }
@@ -98,12 +95,9 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.RemoveAsync(office, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing office.", ex);
         }
     }
@@ -138,12 +132,9 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while updating offices.", ex);
         }
     }
@@ -161,12 +152,9 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.RemoveRangeAsync(existingOffices, ct);
             await transaction.CommitAsync(ct);
         }
-        catch (Exception ex) when (ex is not AppException)
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            if (ex is KeyNotFoundException)
-                throw;
-
             throw new ServerException("An error occurred while removing offices.", ex);
         }
     }
