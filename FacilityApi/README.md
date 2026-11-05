@@ -44,7 +44,8 @@ Business model and persistence contracts. No reference to the other projects. No
 | Folder | Contents |
 | --- | --- |
 | `Entities` | `OfficeEntity`, `ServiceEntity`, `SpecializationEntity` |
-| `Interfaces` | `IOfficeRepository`, `IServiceRepository`, `ISpecializationRepository`. Same operations as Profiles `IGenericRepository`, declared separately for each entity |
+| `Exceptions` | `AppException`, `ConflictException`, `InvalidFormatException`, `ServerException` |
+| `Interfaces` | `IOfficeRepository`, `IServiceRepository`, `ISpecializationRepository`, `IDbTransactionScope`. Repository operations match Profiles `IGenericRepository` and are declared separately for each entity |
 
 Remove the current `BaseEntity`. Entities do not inherit it, and they do not keep navigation properties.
 
@@ -72,6 +73,8 @@ Use cases and the types controllers exchange with clients. References Domain onl
 The application service assigns `Guid.NewGuid()` before insert. A missing office, service, or specialization throws `KeyNotFoundException`. Delete removes the row.
 
 Update, delete, and the range forms of those operations call the repository twice (load, then write), so they call `IDbTransactionScope.BeginAsync`. The method commits after both calls succeed and rolls back when one throws. Create and create-range call the repository once and do not open a transaction. There is no unit of work. Repositories reuse the open transaction connection instead of opening a second one.
+
+Write methods catch unexpected exceptions, roll back when a transaction is open, and throw `ServerException`. `KeyNotFoundException` and `AppException` are rethrown so the API can map them to 404 and 400.
 
 There is no password hasher and no identity client.
 
@@ -113,7 +116,7 @@ The executable web project. References Application and Infrastructure.
 | `Middlewares` | `GlobalExceptionHandler` (`application/problem+json`) |
 | `Options` | `KeycloakOptions` |
 
-Each controller exposes get by id, paged list, create, update, and delete. List and get require an authenticated user. Create, update, and delete require the `Admin` role. List actions take the entity filter and `PaginationParamsDto` from the query string.
+Each controller exposes get by id, paged list, create, update, delete, and the batch forms of create, update, and delete. List and get require an authenticated user. Create, update, delete, and batch actions require the `Admin` role. List actions take the entity filter and `PaginationParamsDto` from the query string.
 
 Authentication is JWT Bearer against the Keycloak realm. The access token is read from the `accessToken` cookie when that cookie is present, otherwise from the `Authorization` header. Realm roles are copied onto `role` claims. Audience check accepts `aud` or `azp` equal to `Keycloak:Audience`. Role names match Profiles: `Admin`, `Receptionist`, `Doctor`, `Patient`.
 
