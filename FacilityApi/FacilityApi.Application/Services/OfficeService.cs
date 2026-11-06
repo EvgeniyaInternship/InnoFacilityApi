@@ -7,6 +7,7 @@ using FacilityApi.Application.Helpers;
 using FacilityApi.Application.Interfaces;
 using FacilityApi.Application.Mappings;
 using FacilityApi.Domain.Entities;
+using FacilityApi.Domain.Exceptions;
 using FacilityApi.Domain.Interfaces;
 using System.Linq.Expressions;
 
@@ -51,9 +52,16 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
 
     public async Task<OfficeDto> CreateOfficeAsync(CreateOfficeDto dto, CancellationToken ct = default)
     {
-        var office = dto.ToEntity(Guid.NewGuid());
-        await officeRepository.AddAsync(office, ct);
-        return office.ToDto();
+        try
+        {
+            var office = dto.ToEntity(Guid.NewGuid());
+            await officeRepository.AddAsync(office, ct);
+            return office.ToDto();
+        }
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
+        {
+            throw new ServerException("An error occurred while creating office.", ex);
+        }
     }
 
     public async Task UpdateOfficeAsync(UpdateOfficeDto dto, CancellationToken ct = default)
@@ -68,10 +76,10 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while updating office.", ex);
         }
     }
 
@@ -87,10 +95,10 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.RemoveAsync(office, ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while removing office.", ex);
         }
     }
 
@@ -99,9 +107,16 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         if (!dtos.Any())
             return [];
 
-        var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
-        await officeRepository.AddRangeAsync(entities, ct);
-        return entities.Select(office => office.ToDto()).ToList();
+        try
+        {
+            var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
+            await officeRepository.AddRangeAsync(entities, ct);
+            return entities.Select(office => office.ToDto()).ToList();
+        }
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
+        {
+            throw new ServerException("An error occurred while creating offices.", ex);
+        }
     }
 
     public async Task UpdateRangeAsync(List<UpdateOfficeDto> dtos, CancellationToken ct = default)
@@ -117,10 +132,10 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while updating offices.", ex);
         }
     }
 
@@ -137,10 +152,10 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await officeRepository.RemoveRangeAsync(existingOffices, ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while removing offices.", ex);
         }
     }
 

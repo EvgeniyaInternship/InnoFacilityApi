@@ -7,6 +7,7 @@ using FacilityApi.Application.Helpers;
 using FacilityApi.Application.Interfaces;
 using FacilityApi.Application.Mappings;
 using FacilityApi.Domain.Entities;
+using FacilityApi.Domain.Exceptions;
 using FacilityApi.Domain.Interfaces;
 using System.Linq.Expressions;
 
@@ -51,9 +52,16 @@ public sealed class SpecializationService(ISpecializationRepository specializati
 
     public async Task<SpecializationDto> CreateSpecializationAsync(CreateSpecializationDto dto, CancellationToken ct = default)
     {
-        var specialization = dto.ToEntity(Guid.NewGuid());
-        await specializationRepository.AddAsync(specialization, ct);
-        return specialization.ToDto();
+        try
+        {
+            var specialization = dto.ToEntity(Guid.NewGuid());
+            await specializationRepository.AddAsync(specialization, ct);
+            return specialization.ToDto();
+        }
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
+        {
+            throw new ServerException("An error occurred while creating specialization.", ex);
+        }
     }
 
     public async Task UpdateSpecializationAsync(UpdateSpecializationDto dto, CancellationToken ct = default)
@@ -68,10 +76,10 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while updating specialization.", ex);
         }
     }
 
@@ -87,10 +95,10 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.RemoveAsync(specialization, ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while removing specialization.", ex);
         }
     }
 
@@ -99,9 +107,16 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         if (!dtos.Any())
             return [];
 
-        var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
-        await specializationRepository.AddRangeAsync(entities, ct);
-        return entities.Select(specialization => specialization.ToDto()).ToList();
+        try
+        {
+            var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
+            await specializationRepository.AddRangeAsync(entities, ct);
+            return entities.Select(specialization => specialization.ToDto()).ToList();
+        }
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
+        {
+            throw new ServerException("An error occurred while creating specializations.", ex);
+        }
     }
 
     public async Task UpdateRangeAsync(List<UpdateSpecializationDto> dtos, CancellationToken ct = default)
@@ -117,10 +132,10 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while updating specializations.", ex);
         }
     }
 
@@ -137,10 +152,10 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await specializationRepository.RemoveRangeAsync(existingSpecializations, ct);
             await transaction.CommitAsync(ct);
         }
-        catch
+        catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
             await transaction.RollbackAsync(ct);
-            throw;
+            throw new ServerException("An error occurred while removing specializations.", ex);
         }
     }
 
