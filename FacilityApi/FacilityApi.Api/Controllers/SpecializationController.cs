@@ -14,7 +14,7 @@ namespace FacilityApi.Api.Controllers;
 [Route("[controller]")]
 public sealed class SpecializationController(ISpecializationService specializationService) : ControllerBase
 {
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(SpecializationDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -25,7 +25,7 @@ public sealed class SpecializationController(ISpecializationService specializati
         return Ok(specialization);
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResultDto<SpecializationDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]

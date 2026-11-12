@@ -14,7 +14,7 @@ namespace FacilityApi.Api.Controllers;
 [Route("[controller]")]
 public sealed class ServiceController(IServiceService serviceService) : ControllerBase
 {
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(ServiceDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -25,7 +25,7 @@ public sealed class ServiceController(IServiceService serviceService) : Controll
         return Ok(service);
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResultDto<ServiceDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]

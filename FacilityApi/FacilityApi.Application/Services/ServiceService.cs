@@ -20,9 +20,11 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         if (filter is null)
             return x => true;
 
-        return x => (filter.Title == null || x.Title == filter.Title)
+        return x => (filter.Title == null || x.Title.ToLower().Contains(filter.Title.ToLower()))
                  && (filter.IsActive == null || x.IsActive == filter.IsActive)
-                 && (filter.DoctorId == null || x.DoctorId == filter.DoctorId);
+                 && (filter.DoctorId == null || x.DoctorId == filter.DoctorId)
+                 && (filter.MinPrice == null || x.Price >= filter.MinPrice)
+                 && (filter.MaxPrice == null || x.Price <= filter.MaxPrice);
     }
 
     public async Task<ServiceDto> GetServiceByIdAsync(Guid id, CancellationToken ct = default)

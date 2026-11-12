@@ -14,7 +14,7 @@ namespace FacilityApi.Api.Controllers;
 [Route("[controller]")]
 public sealed class OfficeController(IOfficeService officeService) : ControllerBase
 {
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet("{id:guid}")]
     [ProducesResponseType(typeof(OfficeDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -25,7 +25,7 @@ public sealed class OfficeController(IOfficeService officeService) : ControllerB
         return Ok(office);
     }
 
-    [Authorize]
+    [AllowAnonymous]
     [HttpGet]
     [ProducesResponseType(typeof(PagedResultDto<OfficeDto>), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status500InternalServerError)]
