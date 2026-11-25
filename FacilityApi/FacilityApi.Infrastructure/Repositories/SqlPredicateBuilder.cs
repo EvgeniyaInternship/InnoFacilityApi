@@ -37,7 +37,7 @@ internal static class SqlPredicateBuilder
             UnaryExpression { NodeType: ExpressionType.Not } unary =>
                 $"NOT ({Visit(unary.Operand, parameter, parameters, ref index)})",
             MemberExpression member when IsColumn(member, parameter) => Quote(member.Member.Name),
-            MethodCallExpression => throw NotSupported(expression),
+            MethodCallExpression call => VisitCall(call, parameter, parameters, ref index),
             _ => ValueSql(expression, parameters, ref index)
         };
     }
@@ -81,6 +81,34 @@ internal static class SqlPredicateBuilder
         return $"({leftSql} {op} {rightSql})";
     }
 
+    private static string VisitCall(
+        MethodCallExpression call,
+        ParameterExpression parameter,
+        DynamicParameters parameters,
+        ref int index)
+    {
+        if (call.Method.Name == nameof(string.ToLower) && call.Arguments.Count == 0 && call.Object is not null)
+        {
+            if (ColumnName(call.Object, parameter) is string column)
+                return $"LOWER({Quote(column)})";
+
+            return ValueSql(call, parameters, ref index);
+        }
+
+        if (call.Method.Name == nameof(string.Contains) && call.Arguments.Count == 1 && call.Object is not null)
+        {
+            var left = Visit(call.Object, parameter, parameters, ref index);
+            var text = Evaluate(call.Arguments[0]) as string ?? string.Empty;
+            var escaped = text.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+            var name = $"p{index}";
+            index++;
+            parameters.Add(name, escaped);
+            return $"({left} ILIKE '%' || @{name} || '%' ESCAPE '\\')";
+        }
+
+        throw NotSupported(call);
+    }
+
     private static string ValueSql(Expression expression, DynamicParameters parameters, ref int index)
     {
         var value = Evaluate(expression);
@@ -116,6 +144,14 @@ internal static class SqlPredicateBuilder
 
     private static bool IsColumn(MemberExpression member, ParameterExpression parameter)
         => member.Expression is not null && Strip(member.Expression) == parameter;
+
+    private static string? ColumnName(Expression expression, ParameterExpression parameter)
+    {
+        if (Strip(expression) is MemberExpression member && IsColumn(member, parameter))
+            return member.Member.Name;
+
+        return null;
+    }
 
     private static string Quote(string name) => $"\"{name}\"";
 

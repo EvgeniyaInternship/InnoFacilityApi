@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Dockerfile" />
+  </Folder>
   <Project Path="FacilityApi.Api/FacilityApi.Api.csproj" />
   <Project Path="FacilityApi.Application/FacilityApi.Application.csproj" />
   <Project Path="FacilityApi.Domain/FacilityApi.Domain.csproj" />
