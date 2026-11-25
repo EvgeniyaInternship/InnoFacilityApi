@@ -20,7 +20,16 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         if (filter is null)
             return x => true;
 
-        return x => (filter.Title == null || x.Title.ToLower().Contains(filter.Title.ToLower()))
+        if (string.IsNullOrWhiteSpace(filter.Title))
+        {
+            return x => (filter.IsActive == null || x.IsActive == filter.IsActive)
+                     && (filter.DoctorId == null || x.DoctorId == filter.DoctorId)
+                     && (filter.MinPrice == null || x.Price >= filter.MinPrice)
+                     && (filter.MaxPrice == null || x.Price <= filter.MaxPrice);
+        }
+
+        var title = filter.Title;
+        return x => x.Title.ToLower().Contains(title.ToLower())
                  && (filter.IsActive == null || x.IsActive == filter.IsActive)
                  && (filter.DoctorId == null || x.DoctorId == filter.DoctorId)
                  && (filter.MinPrice == null || x.Price >= filter.MinPrice)
