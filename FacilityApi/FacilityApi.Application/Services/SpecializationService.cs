@@ -9,11 +9,15 @@ using FacilityApi.Application.Mappings;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Exceptions;
 using FacilityApi.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace FacilityApi.Application.Services;
 
-public sealed class SpecializationService(ISpecializationRepository specializationRepository, IDbTransactionScope transactionScope) : ISpecializationService
+public sealed class SpecializationService(
+    ISpecializationRepository specializationRepository,
+    IDbTransactionScope transactionScope,
+    ILogger<SpecializationService> logger) : ISpecializationService
 {
     private static Expression<Func<SpecializationEntity, bool>> BuildFilterExpression(SpecializationFilterDto? filter)
     {
@@ -27,8 +31,12 @@ public sealed class SpecializationService(ISpecializationRepository specializati
     {
         var specialization = await specializationRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
         if (specialization is null)
+        {
+            logger.LogWarning("Specialization with id {SpecializationId} does not exist.", id);
             throw new KeyNotFoundException($"Specialization with ID {id} was not found.");
+        }
 
+        logger.LogInformation("Loaded specialization {SpecializationId}.", specialization.Id);
         return specialization.ToDto();
     }
 
@@ -47,6 +55,7 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         var totalPages = PaginationHelper.CalculateTotalPages(totalCount, paginationParams.PageSize);
         var dtos = specializations.Select(specialization => specialization.ToDto()).ToList();
 
+        logger.LogInformation("Loaded {Count} specializations.", dtos.Count);
         return new PagedResultDto<SpecializationDto>(dtos, totalCount, totalPages, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
@@ -56,10 +65,12 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         {
             var specialization = dto.ToEntity(Guid.NewGuid());
             await specializationRepository.AddAsync(specialization, ct);
+            logger.LogInformation("Created specialization {SpecializationId} with title {Title}.", specialization.Id, specialization.Title);
             return specialization.ToDto();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating specialization failed.");
             throw new ServerException("An error occurred while creating specialization.", ex);
         }
     }
@@ -71,13 +82,18 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         {
             var specialization = await specializationRepository.GetAsync(x => x.Id == dto.Id, cancellationToken: ct);
             if (specialization is null)
+            {
+                logger.LogWarning("Specialization with id {SpecializationId} does not exist.", dto.Id);
                 throw new KeyNotFoundException($"Specialization with ID {dto.Id} was not found.");
+            }
 
             await specializationRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated specialization {SpecializationId} with title {Title}.", dto.Id, dto.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Specialization operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating specialization.", ex);
         }
@@ -90,13 +106,18 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         {
             var specialization = await specializationRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
             if (specialization is null)
+            {
+                logger.LogWarning("Specialization with id {SpecializationId} does not exist.", id);
                 throw new KeyNotFoundException($"Specialization with ID {id} was not found.");
+            }
 
             await specializationRepository.RemoveAsync(specialization, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted specialization {SpecializationId} with title {Title}.", specialization.Id, specialization.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Specialization operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing specialization.", ex);
         }
@@ -111,10 +132,12 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         {
             var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
             await specializationRepository.AddRangeAsync(entities, ct);
+            logger.LogInformation("Created {Count} specializations.", entities.Count);
             return entities.Select(specialization => specialization.ToDto()).ToList();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating specializations failed.");
             throw new ServerException("An error occurred while creating specializations.", ex);
         }
     }
@@ -131,9 +154,11 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             await GetExistingAsync(uniqueDtos.Select(dto => dto.Id), ct);
             await specializationRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated {Count} specializations.", uniqueDtos.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Specialization operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating specializations.", ex);
         }
@@ -151,9 +176,11 @@ public sealed class SpecializationService(ISpecializationRepository specializati
             var existingSpecializations = await GetExistingAsync(distinctIds, ct);
             await specializationRepository.RemoveRangeAsync(existingSpecializations, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted {Count} specializations.", existingSpecializations.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Specialization operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing specializations.", ex);
         }
@@ -165,7 +192,10 @@ public sealed class SpecializationService(ISpecializationRepository specializati
         var specializations = await specializationRepository.GetAllAsync(x => true, cancellationToken: ct);
         var existing = specializations.Where(specialization => idSet.Contains(specialization.Id)).ToList();
         if (existing.Count != idSet.Count)
+        {
+            logger.LogWarning("One or more specializations do not exist.");
             throw new KeyNotFoundException("One or more specializations were not found.");
+        }
 
         return existing;
     }

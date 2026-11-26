@@ -9,11 +9,15 @@ using FacilityApi.Application.Mappings;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Exceptions;
 using FacilityApi.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace FacilityApi.Application.Services;
 
-public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransactionScope transactionScope) : IOfficeService
+public sealed class OfficeService(
+    IOfficeRepository officeRepository,
+    IDbTransactionScope transactionScope,
+    ILogger<OfficeService> logger) : IOfficeService
 {
     private static Expression<Func<OfficeEntity, bool>> BuildFilterExpression(OfficeFilterDto? filter)
     {
@@ -27,8 +31,12 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
     {
         var office = await officeRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
         if (office is null)
+        {
+            logger.LogWarning("Office with id {OfficeId} does not exist.", id);
             throw new KeyNotFoundException($"Office with ID {id} was not found.");
+        }
 
+        logger.LogInformation("Loaded office {OfficeId}.", office.Id);
         return office.ToDto();
     }
 
@@ -47,6 +55,7 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         var totalPages = PaginationHelper.CalculateTotalPages(totalCount, paginationParams.PageSize);
         var dtos = offices.Select(office => office.ToDto()).ToList();
 
+        logger.LogInformation("Loaded {Count} offices.", dtos.Count);
         return new PagedResultDto<OfficeDto>(dtos, totalCount, totalPages, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
@@ -56,10 +65,12 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         {
             var office = dto.ToEntity(Guid.NewGuid());
             await officeRepository.AddAsync(office, ct);
+            logger.LogInformation("Created office {OfficeId} with title {Title}.", office.Id, office.Title);
             return office.ToDto();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating office failed.");
             throw new ServerException("An error occurred while creating office.", ex);
         }
     }
@@ -71,13 +82,18 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         {
             var office = await officeRepository.GetAsync(x => x.Id == dto.Id, cancellationToken: ct);
             if (office is null)
+            {
+                logger.LogWarning("Office with id {OfficeId} does not exist.", dto.Id);
                 throw new KeyNotFoundException($"Office with ID {dto.Id} was not found.");
+            }
 
             await officeRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated office {OfficeId} with title {Title}.", dto.Id, dto.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating office.", ex);
         }
@@ -90,13 +106,18 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         {
             var office = await officeRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
             if (office is null)
+            {
+                logger.LogWarning("Office with id {OfficeId} does not exist.", id);
                 throw new KeyNotFoundException($"Office with ID {id} was not found.");
+            }
 
             await officeRepository.RemoveAsync(office, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted office {OfficeId} with title {Title}.", office.Id, office.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing office.", ex);
         }
@@ -111,10 +132,12 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         {
             var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
             await officeRepository.AddRangeAsync(entities, ct);
+            logger.LogInformation("Created {Count} offices.", entities.Count);
             return entities.Select(office => office.ToDto()).ToList();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating offices failed.");
             throw new ServerException("An error occurred while creating offices.", ex);
         }
     }
@@ -131,9 +154,11 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             await GetExistingAsync(uniqueDtos.Select(dto => dto.Id), ct);
             await officeRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated {Count} offices.", uniqueDtos.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating offices.", ex);
         }
@@ -151,9 +176,11 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
             var existingOffices = await GetExistingAsync(distinctIds, ct);
             await officeRepository.RemoveRangeAsync(existingOffices, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted {Count} offices.", existingOffices.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing offices.", ex);
         }
@@ -165,7 +192,10 @@ public sealed class OfficeService(IOfficeRepository officeRepository, IDbTransac
         var offices = await officeRepository.GetAllAsync(x => true, cancellationToken: ct);
         var existing = offices.Where(office => idSet.Contains(office.Id)).ToList();
         if (existing.Count != idSet.Count)
+        {
+            logger.LogWarning("One or more offices do not exist.");
             throw new KeyNotFoundException("One or more offices were not found.");
+        }
 
         return existing;
     }

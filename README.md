@@ -2,7 +2,7 @@
 
 Facility API is a backend service responsible for managing physical offices, healthcare services, and medical specializations within the platform.
 
-Solution layout and the implementation plan are in [FacilityApi/README.md](FacilityApi/README.md).
+Architecture, NuGet packages, configuration, logging, and Docker are in [FacilityApi/README.md](FacilityApi/README.md).
 
 ---
 
@@ -43,7 +43,7 @@ dotnet build
 4. **Run the API**
 Run the API project directly using the `.NET CLI`:
 ```bash
-dotnet run --project FacilityApi.Api
+dotnet run --project FacilityApi.Api --launch-profile http
 
 ```
 
