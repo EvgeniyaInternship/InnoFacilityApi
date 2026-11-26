@@ -44,7 +44,10 @@ public sealed class ServiceService(
     {
         var service = await serviceRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
         if (service is null)
+        {
+            logger.LogWarning("Service with id {ServiceId} does not exist.", id);
             throw new KeyNotFoundException($"Service with ID {id} was not found.");
+        }
 
         logger.LogInformation("Loaded service {ServiceId}.", service.Id);
         return service.ToDto();
@@ -80,6 +83,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating service failed.");
             throw new ServerException("An error occurred while creating service.", ex);
         }
     }
@@ -91,7 +95,10 @@ public sealed class ServiceService(
         {
             var service = await serviceRepository.GetAsync(x => x.Id == dto.Id, cancellationToken: ct);
             if (service is null)
+            {
+                logger.LogWarning("Service with id {ServiceId} does not exist.", dto.Id);
                 throw new KeyNotFoundException($"Service with ID {dto.Id} was not found.");
+            }
 
             await serviceRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
@@ -99,6 +106,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Service operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating service.", ex);
         }
@@ -111,7 +119,10 @@ public sealed class ServiceService(
         {
             var service = await serviceRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
             if (service is null)
+            {
+                logger.LogWarning("Service with id {ServiceId} does not exist.", id);
                 throw new KeyNotFoundException($"Service with ID {id} was not found.");
+            }
 
             await serviceRepository.RemoveAsync(service, ct);
             await transaction.CommitAsync(ct);
@@ -119,6 +130,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Service operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing service.", ex);
         }
@@ -138,6 +150,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating services failed.");
             throw new ServerException("An error occurred while creating services.", ex);
         }
     }
@@ -158,6 +171,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Service operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating services.", ex);
         }
@@ -179,6 +193,7 @@ public sealed class ServiceService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Service operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing services.", ex);
         }
@@ -190,7 +205,10 @@ public sealed class ServiceService(
         var services = await serviceRepository.GetAllAsync(x => true, cancellationToken: ct);
         var existing = services.Where(service => idSet.Contains(service.Id)).ToList();
         if (existing.Count != idSet.Count)
+        {
+            logger.LogWarning("One or more services do not exist.");
             throw new KeyNotFoundException("One or more services were not found.");
+        }
 
         return existing;
     }

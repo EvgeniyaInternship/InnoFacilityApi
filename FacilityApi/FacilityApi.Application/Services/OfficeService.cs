@@ -31,7 +31,10 @@ public sealed class OfficeService(
     {
         var office = await officeRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
         if (office is null)
+        {
+            logger.LogWarning("Office with id {OfficeId} does not exist.", id);
             throw new KeyNotFoundException($"Office with ID {id} was not found.");
+        }
 
         logger.LogInformation("Loaded office {OfficeId}.", office.Id);
         return office.ToDto();
@@ -67,6 +70,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating office failed.");
             throw new ServerException("An error occurred while creating office.", ex);
         }
     }
@@ -78,7 +82,10 @@ public sealed class OfficeService(
         {
             var office = await officeRepository.GetAsync(x => x.Id == dto.Id, cancellationToken: ct);
             if (office is null)
+            {
+                logger.LogWarning("Office with id {OfficeId} does not exist.", dto.Id);
                 throw new KeyNotFoundException($"Office with ID {dto.Id} was not found.");
+            }
 
             await officeRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
@@ -86,6 +93,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating office.", ex);
         }
@@ -98,7 +106,10 @@ public sealed class OfficeService(
         {
             var office = await officeRepository.GetAsync(x => x.Id == id, cancellationToken: ct);
             if (office is null)
+            {
+                logger.LogWarning("Office with id {OfficeId} does not exist.", id);
                 throw new KeyNotFoundException($"Office with ID {id} was not found.");
+            }
 
             await officeRepository.RemoveAsync(office, ct);
             await transaction.CommitAsync(ct);
@@ -106,6 +117,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing office.", ex);
         }
@@ -125,6 +137,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Creating offices failed.");
             throw new ServerException("An error occurred while creating offices.", ex);
         }
     }
@@ -145,6 +158,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while updating offices.", ex);
         }
@@ -166,6 +180,7 @@ public sealed class OfficeService(
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
+            logger.LogError(ex, "Office operation failed.");
             await transaction.RollbackAsync(ct);
             throw new ServerException("An error occurred while removing offices.", ex);
         }
@@ -177,7 +192,10 @@ public sealed class OfficeService(
         var offices = await officeRepository.GetAllAsync(x => true, cancellationToken: ct);
         var existing = offices.Where(office => idSet.Contains(office.Id)).ToList();
         if (existing.Count != idSet.Count)
+        {
+            logger.LogWarning("One or more offices do not exist.");
             throw new KeyNotFoundException("One or more offices were not found.");
+        }
 
         return existing;
     }
