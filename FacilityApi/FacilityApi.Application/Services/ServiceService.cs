@@ -9,11 +9,15 @@ using FacilityApi.Application.Mappings;
 using FacilityApi.Domain.Entities;
 using FacilityApi.Domain.Exceptions;
 using FacilityApi.Domain.Interfaces;
+using Microsoft.Extensions.Logging;
 using System.Linq.Expressions;
 
 namespace FacilityApi.Application.Services;
 
-public sealed class ServiceService(IServiceRepository serviceRepository, IDbTransactionScope transactionScope) : IServiceService
+public sealed class ServiceService(
+    IServiceRepository serviceRepository,
+    IDbTransactionScope transactionScope,
+    ILogger<ServiceService> logger) : IServiceService
 {
     private static Expression<Func<ServiceEntity, bool>> BuildFilterExpression(ServiceFilterDto? filter)
     {
@@ -42,6 +46,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         if (service is null)
             throw new KeyNotFoundException($"Service with ID {id} was not found.");
 
+        logger.LogInformation("Loaded service {ServiceId}.", service.Id);
         return service.ToDto();
     }
 
@@ -60,6 +65,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         var totalPages = PaginationHelper.CalculateTotalPages(totalCount, paginationParams.PageSize);
         var dtos = services.Select(service => service.ToDto()).ToList();
 
+        logger.LogInformation("Loaded {Count} services.", dtos.Count);
         return new PagedResultDto<ServiceDto>(dtos, totalCount, totalPages, paginationParams.PageNumber, paginationParams.PageSize);
     }
 
@@ -69,6 +75,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         {
             var service = dto.ToEntity(Guid.NewGuid());
             await serviceRepository.AddAsync(service, ct);
+            logger.LogInformation("Created service {ServiceId} with title {Title}.", service.Id, service.Title);
             return service.ToDto();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
@@ -88,6 +95,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
 
             await serviceRepository.UpdateAsync(dto.UpdateEntity(), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated service {ServiceId} with title {Title}.", dto.Id, dto.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
@@ -107,6 +115,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
 
             await serviceRepository.RemoveAsync(service, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted service {ServiceId} with title {Title}.", service.Id, service.Title);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
@@ -124,6 +133,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
         {
             var entities = dtos.Select(dto => dto.ToEntity(Guid.NewGuid())).ToList();
             await serviceRepository.AddRangeAsync(entities, ct);
+            logger.LogInformation("Created {Count} services.", entities.Count);
             return entities.Select(service => service.ToDto()).ToList();
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
@@ -144,6 +154,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             await GetExistingAsync(uniqueDtos.Select(dto => dto.Id), ct);
             await serviceRepository.UpdateRangeAsync(uniqueDtos.Select(dto => dto.UpdateEntity()), ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Updated {Count} services.", uniqueDtos.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {
@@ -164,6 +175,7 @@ public sealed class ServiceService(IServiceRepository serviceRepository, IDbTran
             var existingServices = await GetExistingAsync(distinctIds, ct);
             await serviceRepository.RemoveRangeAsync(existingServices, ct);
             await transaction.CommitAsync(ct);
+            logger.LogInformation("Deleted {Count} services.", existingServices.Count);
         }
         catch (Exception ex) when (ex is not AppException and not KeyNotFoundException)
         {

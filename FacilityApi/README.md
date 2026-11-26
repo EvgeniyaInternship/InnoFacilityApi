@@ -2,7 +2,7 @@
 
 ASP.NET Core service for clinic offices, healthcare services, and medical specializations. It stores them in PostgreSQL.
 
-This document is the structure to implement. It follows Profiles API. Persistence uses Dapper. Each entity declares its own id. Each entity has its own repository.
+Persistence uses Dapper. Each entity declares its own id. Each entity has its own repository. The service is implemented.
 
 Target framework: **.NET 10** (`net10.0`). Nullable reference types and implicit usings are enabled in every project.
 
@@ -47,9 +47,9 @@ Business model and persistence contracts. No reference to the other projects. No
 | `Exceptions` | `AppException`, `ConflictException`, `InvalidFormatException`, `ServerException` |
 | `Interfaces` | `IOfficeRepository`, `IServiceRepository`, `ISpecializationRepository`, `IDbTransactionScope`. Repository operations match Profiles `IGenericRepository` and are declared separately for each entity |
 
-Remove the current `BaseEntity`. Entities do not inherit it, and they do not keep navigation properties.
+Entities do not inherit a base type, and they do not keep navigation properties.
 
-`OfficeEntity` has `Id` and `Title`. `SpecializationEntity` has `Id`, `Title`, and `Description`. `ServiceEntity` has `Id`, `Title`, `Description`, `Price` (`decimal`), `IsActive`, and `DoctorId`. `Id` and `DoctorId` are `Guid`. `DoctorId` is the Profiles doctor id. This database has no foreign key to the doctor table.
+`OfficeEntity` has `Id` and `Title`. `SpecializationEntity` has `Id`, `Title`, and `Description`. `ServiceEntity` has `Id`, `Title`, `Description`, `Price` (`decimal`), `IsActive`, and `DoctorId`. `Id` and `DoctorId` are `Guid`. `DoctorId` is the Profiles `Doctors.Id`, not the account id. This database has no foreign key to that table.
 
 Profiles stores `OfficeId` on admin, receptionist, and doctor, and `SpecializationId` on doctor. Those rows stay in Profiles.
 
@@ -85,12 +85,12 @@ PostgreSQL persistence. References Domain only.
 | Folder | Contents |
 | --- | --- |
 | `Data` | `DatabaseOptions` bound from `ConnectionStrings`, and `NpgsqlConnectionFactory` |
-| `Repositories` | `OfficeRepository`, `ServiceRepository`, `SpecializationRepository` |
+| `Repositories` | `OfficeRepository`, `ServiceRepository`, `SpecializationRepository`, and `SqlPredicateBuilder` |
 | `Scripts` | `001_init.sql` |
 
 `NpgsqlConnectionFactory` creates and opens an `NpgsqlConnection`. It stays in Infrastructure. Domain interfaces do not mention connections.
 
-Each repository owns its SQL text. Each method opens its own connection, runs the command, and disposes the connection. Insert, update, and delete run immediately. Repositories do not share a base class.
+Each repository owns its SQL text. `SqlPredicateBuilder` turns the repository `Expression` into a `WHERE` clause. It supports `string.ToLower()` and `string.Contains()` (`ILIKE`). Each method opens its own connection, runs the command, and disposes the connection. Insert, update, and delete run immediately. Repositories do not share a base class.
 
 `DependencyInjection.AddInfrastructure` requires `ConnectionStrings:FacilityDb` and registers the connection factory and the three repositories.
 
@@ -116,11 +116,13 @@ The executable web project. References Application and Infrastructure.
 | `Middlewares` | `GlobalExceptionHandler` (`application/problem+json`) |
 | `Options` | `KeycloakOptions` |
 
-Each controller exposes get by id, paged list, create, update, delete, and the batch forms of create, update, and delete. List and get require an authenticated user. Create, update, delete, and batch actions require the `Admin` role. List actions take the entity filter and `PaginationParamsDto` from the query string.
+Each controller exposes get by id, paged list, create, update, delete, and the batch forms of create, update, and delete. List and get are anonymous. Create, update, delete, and batch actions require the `Admin` role. List actions take the entity filter and `PaginationParamsDto` from the query string.
 
 Authentication is JWT Bearer against the Keycloak realm. The access token is read from the `accessToken` cookie when that cookie is present, otherwise from the `Authorization` header. Realm roles are copied onto `role` claims. Audience check accepts `aud` or `azp` equal to `Keycloak:Audience`. Role names match Profiles: `Admin`, `Receptionist`, `Doctor`, `Patient`.
 
 Swagger UI is enabled in Development at `/swagger`. HTTPS redirection runs outside Development.
+
+Serilog writes to the console and to MongoDB through the `MongoDBBson` sink. The database is `logs` and the collection is `facility`. Startup is Information. Each call writes a Serilog request line with method, path, status, and elapsed time, plus one HTTP log with headers, query, duration, and the request and response bodies. Authorization and cookie headers are redacted. Each public service method logs its outcome. `GlobalExceptionHandler` writes warnings and errors to the same collection. Compose sets `Serilog__WriteTo__0__Args__databaseUrl` from `x-mongo-logs-url`, using `MONGO_USER`, `MONGO_PASSWORD`, and `MONGO_DB`.
 
 `GlobalExceptionHandler` maps argument and format errors and `ConflictException` to 400, `UnauthorizedAccessException` to 401, `KeyNotFoundException` to 404, and anything else to 500. 500 responses hide the exception message.
 
@@ -132,6 +134,7 @@ Use these versions. Shared packages match Profiles API.
 | --- | --- | --- |
 | Application | FluentValidation | 12.2.0 |
 | Application | FluentValidation.DependencyInjectionExtensions | 12.2.0 |
+| Application | Microsoft.Extensions.Logging.Abstractions | 11.0.0 |
 | Application | SharpGrip.FluentValidation.AutoValidation.Mvc | 2.0.0 |
 | Infrastructure | Dapper | 2.1.89 |
 | Infrastructure | Npgsql | 10.0.3 |
@@ -140,6 +143,8 @@ Use these versions. Shared packages match Profiles API.
 | Infrastructure | Microsoft.Extensions.Options.ConfigurationExtensions | 10.0.14 |
 | Api | Microsoft.AspNetCore.Authentication.JwtBearer | 10.0.14 |
 | Api | Microsoft.AspNetCore.OpenApi | 10.0.12 |
+| Api | Serilog.AspNetCore | 11.0.0 |
+| Api | Serilog.Sinks.MongoDB | 8.0.0 |
 | Api | Swashbuckle.AspNetCore | 10.2.3 |
 
 Domain has no package references.
@@ -151,15 +156,17 @@ Domain has no package references.
 | Key | Purpose |
 | --- | --- |
 | `Keycloak:BaseUrl` | Keycloak base URL. Default `http://localhost:8080` |
-| `Keycloak:Realm` | Realm used as the JWT authority. Default `myrealm` |
+| `Keycloak:Realm` | Realm used as the JWT authority. `appsettings.json` defaults to `myrealm`. Compose uses `KEYCLOAK_REALM` (`inno-realm` in `.env.example`) |
 | `Keycloak:Audience` | Expected token audience / authorized party. Default `dotnet-auth-service` |
 | `Keycloak:RequireHttpsMetadata` | JWT metadata HTTPS requirement. Default `false` for local HTTP |
 
 `ConnectionStrings:FacilityDb` is required at startup and is not in `appsettings.json`. Set it with user secrets on the API project (the process loads that project's secrets):
 
 ```powershell
-dotnet user-secrets set "ConnectionStrings:FacilityDb" "Host=localhost;Port=5432;Database=facility;Username=postgres;Password=postgres" --project FacilityApi.Api
+dotnet user-secrets set "ConnectionStrings:FacilityDb" "Host=localhost;Port=5434;Database=facility;Username=postgres;Password=postgres" --project FacilityApi.Api
 ```
+
+Port `5434` is the Compose host port for `facility-db`. Port `5432` is SonarQube. The database name and password are `FACILITY_DB`, `FACILITY_DB_USER`, and `FACILITY_DB_PASSWORD` in `InnoInfrastructure/.env`. The API user-secrets id is `a27f01fb-1d5b-45e7-be2c-d9161fd0afa8`.
 
 ## Setup and commands
 
@@ -176,7 +183,9 @@ The `http` profile listens on `http://localhost:5035`. Swagger: `http://localhos
 Apply the schema with `psql` (there is no `dotnet ef` command in this service):
 
 ```powershell
-psql "host=localhost port=5432 dbname=facility user=postgres" -f FacilityApi.Infrastructure/Scripts/001_init.sql
+psql "host=localhost port=5434 dbname=facility user=postgres" -f FacilityApi.Infrastructure/Scripts/001_init.sql
 ```
 
-Keycloak realm roles must match the Profiles role names: `Admin`, `Receptionist`, `Doctor`, `Patient`.
+Compose runs that script only when the `facility-db` volume is empty. This repository has a `Dockerfile` and no Compose file. Start the shared stack from `InnoInfrastructure`.
+
+Keycloak realm roles must match the Profiles role names: `Admin`, `Receptionist`, `Doctor`, `Patient`. `DoctorId` on a service is the Profiles doctor profile id, not the account id.
